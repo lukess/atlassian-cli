@@ -1,0 +1,52 @@
+# Atlassian CLI configuration
+# Copy this file to ~/.config/atlassian-cli/config.toml and fill in your values.
+
+# Your Jira Cloud ID.
+# Find it at: https://admin.atlassian.com → select your organization → the cloud ID
+# is in the URL: https://api.atlassian.com/ex/jira/<cloud_id>/...
+cloud_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Your Atlassian account email address.
+email = "you@example.com"
+
+# Your Jira API token (with scopes).
+# Create one at: https://id.atlassian.com/manage-profile/security/api-tokens
+# Choose "Create API token with scopes" and grant at least:
+#   Jira: read:jira-work, write:jira-work, read:jira-user
+# You can also set this via the JIRA_API_TOKEN environment variable instead.
+jira_api_token = "your-jira-api-token-here"
+
+# Your Confluence API token (with scopes).
+# Can be a separate token or the same one if it also has Confluence scopes:
+#   Confluence: read:confluence-content.all, write:confluence-content, read:confluence-space.summary
+# You can also set this via the CONFLUENCE_API_TOKEN environment variable instead.
+confluence_api_token = "your-confluence-api-token-here"
+
+# (Optional) Default project key used when -p/--project is not specified.
+# default_project = "PROJ"
+
+# (Optional) Your Jira web URL used to open issues in the browser.
+# Set this to enable Enter-to-browse in the TUI and the `issue view` command.
+# server = "https://yourcompany.atlassian.net"
+
+# (Optional) Custom fields to display in preview and detail views.
+# Add one [[custom_fields]] block per field. Fields are shown in the order listed,
+# between Work Items and Description.
+# To find a field ID: run the command below and search for the field name:
+#   curl -u email:token "https://api.atlassian.com/ex/jira/<cloud_id>/rest/api/3/field" | jq '[.[] | select(.custom==true) | {name, id}] | sort_by(.name)'
+#
+# Options per field:
+#   name     - display label shown in the TUI (required)
+#   id       - Jira custom field ID, e.g. "customfield_11100" (required)
+#   lines    - max lines in preview panel (default: 5); detail view uses this as a hard cap too if set
+#   markdown - true = plain text / markdown / numeric field, skip ADF parsing (default: false)
+#
+# [[custom_fields]]
+# name     = "Acceptance Criteria"
+# id       = "customfield_11100"
+# lines    = 5
+#
+# [[custom_fields]]
+# name     = "Story Points"
+# id       = "customfield_10010"
+# markdown = true   # numeric field — must set markdown=true so the number is shown
