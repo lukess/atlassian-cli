@@ -2,4 +2,4 @@
 /target
 .DS_Store
 config.toml
-.github/
+.github/copilot-instructions.md
