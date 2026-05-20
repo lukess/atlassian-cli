@@ -88,6 +88,11 @@ atlassian jira issue move PROJ-123
 atlassian jira issue link PROJ-1 PROJ-2
 atlassian jira issue link PROJ-1 PROJ-2 "Blocks"
 atlassian jira issue unlink PROJ-1 PROJ-2
+
+# Attachments
+atlassian jira issue attachment PROJ-123          # list attachments
+atlassian jira issue attachment PROJ-123 --open 1 # open attachment #1 in default app
+atlassian jira issue attachment PROJ-123 --open 1 --save  # save to current directory
 ```
 
 #### `issue list` flags

@@ -123,6 +123,18 @@ pub struct IssueLink {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Attachment {
+    pub id: String,
+    pub filename: String,
+    #[serde(rename = "mimeType")]
+    pub mime_type: String,
+    pub content: String,
+    pub size: u64,
+    pub author: Option<User>,
+    pub created: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct IssueFields {
     pub summary: String,
     pub status: Option<Status>,
@@ -141,6 +153,8 @@ pub struct IssueFields {
     pub components: Vec<Component>,
     #[serde(rename = "fixVersions", default)]
     pub fix_versions: Vec<Version>,
+    #[serde(default)]
+    pub attachment: Vec<Attachment>,
     pub parent: Option<Box<Issue>>,
     pub subtasks: Option<Vec<Issue>>,
     #[serde(rename = "issuelinks", default)]
@@ -522,6 +536,19 @@ impl JiraClient {
             self.check_response(resp).await?;
         }
         Ok(link_ids.len())
+    }
+
+    pub async fn download_attachment(&self, url: &str) -> Result<Vec<u8>> {
+        // Validate URL is on the expected Atlassian instance to prevent SSRF and credential leakage
+        let instance_prefix = self.base_url.trim_end_matches("/rest/api/3").to_string() + "/";
+        if !url.starts_with(&instance_prefix) {
+            return Err(anyhow!("Attachment URL does not match configured Jira instance"));
+        }
+        let resp = self.client.get(url)
+            .basic_auth(self.auth().0, Some(self.auth().1))
+            .send().await?;
+        let resp = self.check_response(resp).await?;
+        Ok(resp.bytes().await?.to_vec())
     }
 
     pub async fn list_projects(&self, max_results: u32) -> Result<Vec<Project>> {

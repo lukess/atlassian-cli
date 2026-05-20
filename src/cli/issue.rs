@@ -20,6 +20,8 @@ pub enum IssueCommands {
     Unlink(UnlinkArgs),
     /// View issue in browser
     View(ViewArgs),
+    /// List or open attachments on an issue
+    Attachment(AttachmentArgs),
 }
 
 #[derive(Args)]
@@ -282,4 +284,18 @@ pub struct ViewArgs {
     /// Number of most-recent comments to show (default: all)
     #[arg(long = "comments")]
     pub comments: Option<usize>,
+}
+
+#[derive(Args)]
+pub struct AttachmentArgs {
+    /// Issue key (e.g. PROJ-123)
+    pub key: String,
+
+    /// Open attachment by 1-based index (e.g. --open 1)
+    #[arg(long = "open")]
+    pub open: Option<usize>,
+
+    /// Save attachment to current directory instead of opening it
+    #[arg(long = "save")]
+    pub save: bool,
 }
