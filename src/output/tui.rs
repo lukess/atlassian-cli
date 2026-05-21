@@ -198,7 +198,7 @@ pub fn run_tui(issues: &[Issue], total: u32, initial_index: usize, custom_fields
 }
 
 fn draw(f: &mut ratatui::Frame, list: &mut IssueList, search_query: &str, search_mode: bool, custom_fields: &[crate::config::CustomField]) {
-    let area = f.size();
+    let area = f.area();
 
     let search_visible = !search_query.is_empty() || search_mode;
     let (main_area, search_area) = if search_visible {
@@ -397,7 +397,7 @@ fn draw_detail(f: &mut ratatui::Frame, list: &IssueList, area: Rect, custom_fiel
 }
 
 fn draw_help(f: &mut ratatui::Frame) {
-    let area = f.size();
+    let area = f.area();
     let w = 44u16;
     let h = 17u16;
     let x = area.width.saturating_sub(w) / 2;
@@ -491,7 +491,7 @@ pub fn run_issue_view(issue: &Issue, children: &[Issue], comments_limit: Option<
 }
 
 fn draw_single_issue(f: &mut ratatui::Frame, issue: &Issue, children: &[Issue], comments_limit: Option<usize>, scroll: u16, custom_fields: &[crate::config::CustomField]) {
-    let area = f.size();
+    let area = f.area();
     let flds = &issue.fields;
     let type_name = flds.issue_type.as_ref().map(|t| t.name.as_str()).unwrap_or("Issue");
     let status    = flds.status.as_ref().map(|s| s.name.as_str()).unwrap_or("?");

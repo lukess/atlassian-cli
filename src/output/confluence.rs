@@ -221,7 +221,7 @@ pub fn run_space_list_tui(spaces: &[Space], total: u32, config: &Config) -> io::
 }
 
 fn draw_space_list(f: &mut ratatui::Frame, spaces: &[Space], total: u32, selected: usize) {
-    let area = f.size();
+    let area = f.area();
     let title = format!(
         " Confluence Spaces ({}) — [↑↓/jk] navigate  [Enter] open  [q] quit ",
         total
@@ -420,7 +420,7 @@ fn draw_page_list(
     search_mode: bool,
     is_loading: bool,
 ) {
-    let area = f.size();
+    let area = f.area();
 
     let search_visible = !search_query.is_empty() || search_mode;
     let (main_area, search_area) = if search_visible {
@@ -710,7 +710,7 @@ fn build_page_lines(page: &Page, children: &[Page]) -> Vec<Line<'static>> {
 }
 
 fn draw_page_view(f: &mut ratatui::Frame, page: &Page, lines: &[Line<'static>], scroll: u16) {
-    let area = f.size();
+    let area = f.area();
     let title = format!(
         " {} — [↑↓/jk] scroll  [PgUp/Dn] page  [Enter] browser  [g] top  [q] back ",
         page.id
