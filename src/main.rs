@@ -510,6 +510,62 @@ async fn handle_issue(cmd: IssueCommands, jira: &JiraClient, config: &Config) ->
             }
             Ok(())
         }
+
+        IssueCommands::Attachment(args) => {
+            let issue = jira.get_issue(&args.key).await?;
+            let attachments = &issue.fields.attachment;
+
+            if attachments.is_empty() {
+                println!("No attachments on {}", args.key);
+                return Ok(());
+            }
+
+            if let Some(idx) = args.open {
+                if idx == 0 {
+                    anyhow::bail!("Attachment index must be 1 or greater");
+                }
+                let att = attachments.get(idx - 1)
+                    .ok_or_else(|| anyhow::anyhow!("Attachment index {} out of range (1–{})", idx, attachments.len()))?;
+
+                // Sanitize filename: use only the final path component, no directory traversal
+                let safe_name = std::path::Path::new(&att.filename)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .filter(|n| !n.is_empty())
+                    .ok_or_else(|| anyhow::anyhow!("Attachment has invalid filename"))?;
+
+                let bytes = jira.download_attachment(&att.content).await?;
+
+                if args.save {
+                    let dest = std::path::Path::new(safe_name);
+                    std::fs::write(dest, &bytes)?;
+                    println!("{} Saved {} ({} bytes)", "✓".green().bold(), safe_name.cyan().to_string(), bytes.len());
+                } else {
+                    let tmp_path = std::env::temp_dir().join(safe_name);
+                    std::fs::write(&tmp_path, &bytes)?;
+                    println!("Opening {} …", safe_name.cyan().to_string());
+                    open_browser(&tmp_path.to_string_lossy())?;
+                    // Temp file left for OS to clean; the opener may read it asynchronously
+                }
+                return Ok(());
+            }
+
+            // List attachments
+            println!("{} attachments on {}:", attachments.len(), args.key.cyan().bold().to_string());
+            println!();
+            for (i, att) in attachments.iter().enumerate() {
+                let size_kb = att.size / 1024;
+                println!("  {}. {} ({}, {} KB)",
+                    (i + 1).to_string().dimmed(),
+                    att.filename.cyan().to_string(),
+                    att.mime_type.dimmed(),
+                    size_kb,
+                );
+            }
+            println!();
+            println!("Use --open N to open an attachment (e.g. --open 1)");
+            Ok(())
+        }
     }
 }
 

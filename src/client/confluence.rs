@@ -243,15 +243,31 @@ impl ConfluenceClient {
 
     pub async fn get_child_pages(&self, id: &str) -> Result<Vec<Page>> {
         let url = format!("{}/content/{}/child/page", self.base_url, id);
-        let resp = self
-            .client
-            .get(&url)
-            .basic_auth(self.auth().0, Some(self.auth().1))
-            .query(&[("limit", "200"), ("expand", "version")])
-            .send()
-            .await?;
-        let resp = self.check_response(resp).await?;
-        Ok(resp.json::<PageListResult>().await?.results)
+        let mut all = Vec::new();
+        let mut start = 0u32;
+        let limit = 200u32;
+        loop {
+            let resp = self
+                .client
+                .get(&url)
+                .basic_auth(self.auth().0, Some(self.auth().1))
+                .query(&[
+                    ("limit", limit.to_string()),
+                    ("start", start.to_string()),
+                    ("expand", "version".to_string()),
+                ])
+                .send()
+                .await?;
+            let resp = self.check_response(resp).await?;
+            let page = resp.json::<PageListResult>().await?;
+            let fetched = page.size;
+            all.extend(page.results);
+            if fetched < limit {
+                break;
+            }
+            start += limit;
+        }
+        Ok(all)
     }
 
     /// Fetch recently modified pages across all spaces (no query filter).

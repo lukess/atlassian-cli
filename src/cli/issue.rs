@@ -20,6 +20,8 @@ pub enum IssueCommands {
     Unlink(UnlinkArgs),
     /// View issue in browser
     View(ViewArgs),
+    /// List or open attachments on an issue
+    Attachment(AttachmentArgs),
 }
 
 #[derive(Args)]
@@ -27,6 +29,7 @@ pub struct ListArgs {
     /// Optional free-text search query (appended as text ~ "..." in JQL)
     pub query: Option<String>,
 
+    /// Filter by project key (e.g. PROJ)
     #[arg(short = 'p', long = "project")]
     pub project: Option<String>,
 
@@ -42,9 +45,11 @@ pub struct ListArgs {
     #[arg(short = 'r', long = "reporter", allow_hyphen_values = true)]
     pub reporter: Option<String>,
 
+    /// Filter by priority (e.g. High, Medium, Low)
     #[arg(short = 'y', long = "priority")]
     pub priority: Option<String>,
 
+    /// Filter by issue type (e.g. Bug, Story, Task, Epic)
     #[arg(short = 't', long = "type", name = "type")]
     pub issue_type: Option<String>,
 
@@ -60,15 +65,19 @@ pub struct ListArgs {
     #[arg(short = 'l', long = "label")]
     pub labels: Vec<String>,
 
+    /// Filter by component
     #[arg(short = 'C', long = "component")]
     pub component: Option<String>,
 
+    /// Filter by fix version
     #[arg(long = "fix-version")]
     pub fix_version: Option<String>,
 
+    /// Field to sort by (e.g. created, updated, rank, priority)
     #[arg(long = "order-by", default_value = "created")]
     pub order_by: String,
 
+    /// Reverse sort order
     #[arg(long = "reverse")]
     pub reverse: bool,
 
@@ -76,18 +85,23 @@ pub struct ListArgs {
     #[arg(long = "created", allow_hyphen_values = true)]
     pub created: Option<String>,
 
+    /// Filter by created date (after); e.g. -7d, yyyy-mm-dd
     #[arg(long = "created-after", allow_hyphen_values = true)]
     pub created_after: Option<String>,
 
+    /// Filter by created date (before); e.g. -7d, yyyy-mm-dd
     #[arg(long = "created-before", allow_hyphen_values = true)]
     pub created_before: Option<String>,
 
+    /// Filter by updated date; e.g. -7d, yyyy-mm-dd
     #[arg(long = "updated", allow_hyphen_values = true)]
     pub updated: Option<String>,
 
+    /// Filter by updated date (after); e.g. -7d, yyyy-mm-dd
     #[arg(long = "updated-after", allow_hyphen_values = true)]
     pub updated_after: Option<String>,
 
+    /// Filter by updated date (before); e.g. -7d, yyyy-mm-dd
     #[arg(long = "updated-before", allow_hyphen_values = true)]
     pub updated_before: Option<String>,
 
@@ -95,6 +109,7 @@ pub struct ListArgs {
     #[arg(long = "history")]
     pub history: bool,
 
+    /// Issues you are watching
     #[arg(short = 'w', long = "watching")]
     pub watching: bool,
 
@@ -269,4 +284,18 @@ pub struct ViewArgs {
     /// Number of most-recent comments to show (default: all)
     #[arg(long = "comments")]
     pub comments: Option<usize>,
+}
+
+#[derive(Args)]
+pub struct AttachmentArgs {
+    /// Issue key (e.g. PROJ-123)
+    pub key: String,
+
+    /// Open attachment by 1-based index (e.g. --open 1)
+    #[arg(long = "open")]
+    pub open: Option<usize>,
+
+    /// Save attachment to current directory instead of opening it
+    #[arg(long = "save")]
+    pub save: bool,
 }
