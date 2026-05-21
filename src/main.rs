@@ -12,6 +12,7 @@ use cli::confluence::ConfluenceCommands;
 use cli::confluence::{PageCommands, SpaceCommands};
 use cli::epic::EpicCommands;
 use cli::issue::IssueCommands;
+use cli::issue::CommentCommands;
 use cli::project::ProjectCommands;
 use client::{Issue, JiraClient};
 use client::confluence::ConfluenceClient;
@@ -565,6 +566,94 @@ async fn handle_issue(cmd: IssueCommands, jira: &JiraClient, config: &Config) ->
             println!();
             println!("Use --open N to open an attachment (e.g. --open 1)");
             Ok(())
+        }
+
+        IssueCommands::Comment { command } => {
+            match command {
+                CommentCommands::Add(args) => {
+                    // Resolve comment body: arg > template file > stdin
+                    let body = if let Some(b) = args.body {
+                        b
+                    } else if let Some(tmpl) = args.template {
+                        if tmpl == "-" {
+                            use std::io::Read;
+                            let mut s = String::new();
+                            std::io::stdin().read_to_string(&mut s)?;
+                            s.trim_end().to_string()
+                        } else {
+                            std::fs::read_to_string(&tmpl)
+                                .map_err(|e| anyhow::anyhow!("Could not read template '{}': {}", tmpl, e))?
+                                .trim_end()
+                                .to_string()
+                        }
+                    } else {
+                        // Check if stdin has data piped in
+                        use std::io::IsTerminal;
+                        if !std::io::stdin().is_terminal() {
+                            use std::io::Read;
+                            let mut s = String::new();
+                            std::io::stdin().read_to_string(&mut s)?;
+                            s.trim_end().to_string()
+                        } else {
+                            prompt("Comment: ")?
+                        }
+                    };
+
+                    if body.trim().is_empty() {
+                        anyhow::bail!("Comment body cannot be empty");
+                    }
+
+                    jira.add_comment(&args.key, &body).await?;
+                    println!("{} Comment added to {}", "✓".green().bold(), args.key.cyan().bold().to_string());
+
+                    if args.web {
+                        match config.browse_url(&args.key) {
+                            Some(url) => open_browser(&url)?,
+                            None => eprintln!("No 'server' URL in config."),
+                        }
+                    }
+                    Ok(())
+                }
+
+                CommentCommands::List(args) => {
+                    let comments_field = jira.list_comments(&args.key).await?;
+                    let all = &comments_field.comments;
+
+                    if all.is_empty() {
+                        println!("No comments on {}", args.key);
+                        return Ok(());
+                    }
+
+                    let comments: &[_] = if let Some(n) = args.number {
+                        let start = all.len().saturating_sub(n);
+                        &all[start..]
+                    } else {
+                        all
+                    };
+
+                    println!("{} comment(s) on {} (showing {}):",
+                        comments_field.total,
+                        args.key.cyan().bold().to_string(),
+                        comments.len(),
+                    );
+
+                    for c in comments {
+                        let author = c.author.as_ref().map(|u| u.display_name.as_str()).unwrap_or("unknown");
+                        let created = c.created.as_deref().unwrap_or("");
+                        println!();
+                        if args.plain {
+                            println!("{} — {}", author, created);
+                        } else {
+                            println!("{} {}", author.cyan().to_string(), created.dimmed().to_string());
+                        }
+                        println!("{}", "─".repeat(60).dimmed().to_string());
+                        if let Some(body) = &c.body {
+                            print!("{}", output::adf_to_text(body));
+                        }
+                    }
+                    Ok(())
+                }
+            }
         }
     }
 }

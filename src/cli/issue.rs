@@ -22,6 +22,20 @@ pub enum IssueCommands {
     View(ViewArgs),
     /// List or open attachments on an issue
     Attachment(AttachmentArgs),
+    /// Manage issue comments
+    #[clap(alias = "comments")]
+    Comment {
+        #[clap(subcommand)]
+        command: CommentCommands,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum CommentCommands {
+    /// Add a comment to an issue
+    Add(CommentAddArgs),
+    /// List comments on an issue
+    List(CommentListArgs),
 }
 
 #[derive(Args)]
@@ -298,4 +312,35 @@ pub struct AttachmentArgs {
     /// Save attachment to current directory instead of opening it
     #[arg(long = "save")]
     pub save: bool,
+}
+
+#[derive(Args)]
+pub struct CommentAddArgs {
+    /// Issue key (e.g. PROJ-123)
+    pub key: String,
+
+    /// Comment body (reads from stdin if omitted and --template - is not set)
+    pub body: Option<String>,
+
+    /// Path to a template file for the comment body, or '-' to read from stdin
+    #[arg(short = 'T', long = "template")]
+    pub template: Option<String>,
+
+    /// Open the issue in browser after adding the comment
+    #[arg(long = "web")]
+    pub web: bool,
+}
+
+#[derive(Args)]
+pub struct CommentListArgs {
+    /// Issue key (e.g. PROJ-123)
+    pub key: String,
+
+    /// Number of most-recent comments to show (default: all)
+    #[arg(short = 'n', long = "number")]
+    pub number: Option<usize>,
+
+    /// Plain output (no color)
+    #[arg(long = "plain")]
+    pub plain: bool,
 }

@@ -538,6 +538,36 @@ impl JiraClient {
         Ok(link_ids.len())
     }
 
+    pub async fn add_comment(&self, key: &str, body: &str) -> Result<Comment> {
+        let url = format!("{}/issue/{}/comment", self.base_url, key);
+        let payload = serde_json::json!({
+            "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{ "type": "text", "text": body }]
+                }]
+            }
+        });
+        let resp = self.client.post(&url)
+            .basic_auth(self.auth().0, Some(self.auth().1))
+            .json(&payload)
+            .send().await?;
+        let resp = self.check_response(resp).await?;
+        Ok(resp.json().await?)
+    }
+
+    pub async fn list_comments(&self, key: &str) -> Result<CommentsField> {
+        let url = format!("{}/issue/{}/comment", self.base_url, key);
+        let resp = self.client.get(&url)
+            .basic_auth(self.auth().0, Some(self.auth().1))
+            .query(&[("orderBy", "created"), ("maxResults", "100")])
+            .send().await?;
+        let resp = self.check_response(resp).await?;
+        Ok(resp.json().await?)
+    }
+
     pub async fn download_attachment(&self, url: &str) -> Result<Vec<u8>> {
         // Validate URL is on the expected Atlassian instance to prevent SSRF and credential leakage
         let instance_prefix = self.base_url.trim_end_matches("/rest/api/3").to_string() + "/";
