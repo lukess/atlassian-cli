@@ -93,7 +93,7 @@ pub fn print_pages_table(pages: &[Page], total: u32) {
         };
         println!(
             "{:<12} {:<12} {:<5} {:<20} {}",
-            page.id.dimmed(),
+            page.id.as_str(),
             space_key.cyan(),
             ver,
             author_short,
@@ -126,7 +126,7 @@ pub fn print_page_detail(page: &Page, children: &[Page]) {
         .map(crate::output::format_date)
         .unwrap_or_default();
 
-    println!("{} ({})", page.title.bold(), page.id.dimmed());
+    println!("{} ({})", page.title.bold(), page.id);
     println!("{}", "─".repeat(80).dimmed());
     println!("{}  {}", "Space:".cyan().bold(), format!("{} ({})", space, space_key));
     println!("{}  v{} — {} — {}", "Version:".cyan().bold(), ver, author, when);
@@ -528,7 +528,7 @@ fn draw_page_preview(f: &mut ratatui::Frame, page: &Page, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("  ID:       ", Style::default().fg(Color::LightBlue)),
-            Span::styled(&page.id, Style::default().fg(Color::DarkGray)),
+            Span::styled(&page.id, Style::default().fg(Color::Gray)),
         ]),
     ];
 
@@ -683,7 +683,7 @@ fn build_page_lines(page: &Page, children: &[Page]) -> Vec<Line<'static>> {
             lines.push(Line::from(vec![
                 Span::raw("    • "),
                 Span::styled(child.title.clone(), Style::default().fg(Color::Cyan)),
-                Span::styled(format!("  ({})", child.id), Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("  ({})", child.id), Style::default().fg(Color::Gray)),
             ]));
         }
     }
