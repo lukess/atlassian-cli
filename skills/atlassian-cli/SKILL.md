@@ -72,6 +72,8 @@ src/
 | `jira issue view KEY [--comments N]` | TUI detail view; all fields, comments, subtasks, work items, custom fields |
 | `jira issue attachment KEY` | List attachments on an issue |
 | `jira issue attachment KEY --open N [--save]` | Download attachment N; open in default app, or save to cwd with `--save` |
+| `jira issue comment list KEY [-n N]` | List comments; `-n` limits to last N |
+| `jira issue comment add KEY [BODY]` | Add comment; reads from arg, `--template FILE`, `--template -` (stdin), piped stdin, or interactive prompt; `--web` opens browser after |
 | `jira epic list [EPIC-KEY] [flags]` | List epics, or child issues of an epic |
 | `jira epic create [-s SUMMARY] [-p PROJ]` | Create a new epic |
 | `jira project list / get KEY` | List / show projects |
@@ -95,6 +97,12 @@ atlassian jira epic create -pPROJ -s "My Epic"
 atlassian jira issue attachment PROJ-123           # list attachments
 atlassian jira issue attachment PROJ-123 --open 1  # open #1 in default app
 atlassian jira issue attachment PROJ-123 --open 1 --save  # save to cwd
+atlassian jira issue comment list PROJ-123         # list all comments
+atlassian jira issue comment list PROJ-123 -n 5    # last 5 comments
+atlassian jira issue comment add PROJ-123 "My comment"
+echo "comment" | atlassian jira issue comment add PROJ-123
+atlassian jira issue comment add PROJ-123 --template /path/to/file.txt
+atlassian jira issue comment add PROJ-123 --web    # open browser after
 ```
 
 ### Clap quirks

@@ -93,6 +93,15 @@ atlassian jira issue unlink PROJ-1 PROJ-2
 atlassian jira issue attachment PROJ-123          # list attachments
 atlassian jira issue attachment PROJ-123 --open 1 # open attachment #1 in default app
 atlassian jira issue attachment PROJ-123 --open 1 --save  # save to current directory
+
+# Comments
+atlassian jira issue comment list PROJ-123        # list all comments
+atlassian jira issue comment list PROJ-123 -n 5   # last 5 comments
+atlassian jira issue comment add PROJ-123 "My comment"
+atlassian jira issue comment add PROJ-123 --template /path/to/file.txt
+atlassian jira issue comment add PROJ-123 --template -   # read from stdin
+echo "comment" | atlassian jira issue comment add PROJ-123
+atlassian jira issue comment add PROJ-123 --web          # open in browser after
 ```
 
 #### `issue list` flags
