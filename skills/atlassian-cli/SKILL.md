@@ -3,7 +3,7 @@ name: atlassian-cli
 description: Custom Rust CLI for Jira and Confluence REST APIs located at ~/dev/atlassian-cli. Use when working on or with the atlassian-cli project — creating issues, epics, listing tickets, TUI views, Confluence pages, and Jira workflows.
 license: MIT
 metadata:
-  author: hsun
+  author: Luke
   version: "1.0"
 ---
 
