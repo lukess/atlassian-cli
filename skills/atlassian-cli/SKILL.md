@@ -192,7 +192,8 @@ markdown = true   # numeric field — skip ADF parsing
 6. **Epic child JQL** — `parent = "PROJ-123" OR "Epic Link" = "PROJ-123"` (covers Classic + Next-gen).
 7. **Custom field IDs are instance-specific** — look up via `/rest/api/3/field`.
 8. **Custom fields via serde flatten** — `#[serde(flatten)] pub custom: HashMap<String, Value>` captures all `customfield_XXXXX`.
-9. **ratatui 0.27** — use `f.size()` not `f.area()`; `Paragraph::scroll((row, col))` takes `(u16, u16)`.
+9. **ratatui 0.30** — use `f.area()` (not `f.size()`, deprecated); `Paragraph::scroll((row, col))` takes `(u16, u16)`.
+16. **Confluence TUI colors** — use `Color::Gray` (not `Color::DarkGray` or `.dimmed()`) for secondary info like page IDs; `DarkGray` is invisible on dark terminal themes.
 10. **`--parent` on `issue create`** — sets `"parent": {"key": ...}`; works for Next-gen projects only. Classic projects use a custom Epic Link field.
 11. **Confluence `atlas_doc_format.value` is a JSON string** — must `serde_json::from_str` before passing to `adf_to_text`.
 12. **Confluence v2 API forbidden** — stick to `/wiki/rest/api/...`; `/wiki/api/v2/...` returns 401.
