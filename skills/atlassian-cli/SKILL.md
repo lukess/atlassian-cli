@@ -9,6 +9,9 @@ metadata:
 
 # atlassian-cli
 
+> **TODO**: Update the repo path below to match your local environment before using this skill.
+> Replace all occurrences of `~/dev/atlassian-cli` with your actual checkout path.
+
 Rust CLI for interacting with the Jira and Confluence REST APIs. Located at `~/dev/atlassian-cli`. Uses `clap` for argument parsing and `reqwest` for HTTP.
 
 ## Build, Test & Run
