@@ -1,6 +1,6 @@
 ---
 name: atlassian-cli
-description: Custom Rust CLI for Jira and Confluence REST APIs located at ~/dev/atlassian-cli. Use when working on or with the atlassian-cli project — creating issues, epics, listing tickets, TUI views, Confluence pages, and Jira workflows.
+description: Custom Rust CLI for Jira and Confluence REST APIs. The pre-built binary is at skills/atlassian-cli/scripts/atlassian. Use when working on or with the atlassian-cli project — creating issues, epics, listing tickets, TUI views, Confluence pages, and Jira workflows.
 license: MIT
 metadata:
   author: Luke
@@ -14,9 +14,20 @@ metadata:
 
 Rust CLI for interacting with the Jira and Confluence REST APIs. Located at `~/dev/atlassian-cli`. Uses `clap` for argument parsing and `reqwest` for HTTP.
 
+The pre-built binary lives at `skills/atlassian-cli/scripts/atlassian` (relative to the skill root). Run it directly:
+
+```bash
+skills/atlassian-cli/scripts/atlassian jira issue list
+skills/atlassian-cli/scripts/atlassian jira me
+```
+
 ## Build, Test & Run
 
 ```bash
+# Run via pre-built binary (no Rust toolchain needed)
+skills/atlassian-cli/scripts/atlassian <subcommand>
+
+# Or build from source at ~/dev/atlassian-cli:
 cargo build                    # debug build
 cargo build --release          # release build
 cargo test                     # run all tests
