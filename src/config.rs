@@ -104,10 +104,18 @@ impl Config {
         let mut config: Config = toml::from_str(&contents)
             .map_err(|e| anyhow::anyhow!("Invalid config: {}", e))?;
         if let Ok(token) = std::env::var("JIRA_API_TOKEN") {
+            tracing::debug!("jira_api_token: loaded from JIRA_API_TOKEN env var");
             config.jira_api_token = token;
+        } else if !config.jira_api_token.is_empty() {
+            tracing::debug!("jira_api_token: loaded from config file");
         }
         if let Ok(token) = std::env::var("CONFLUENCE_API_TOKEN") {
+            tracing::debug!("confluence_api_token: loaded from CONFLUENCE_API_TOKEN env var");
             config.confluence_api_token = Some(token);
+        } else if config.confluence_api_token.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
+            tracing::debug!("confluence_api_token: loaded from config file");
+        } else {
+            tracing::debug!("confluence_api_token: not set, will fall back to jira_api_token");
         }
         if config.jira_api_token.is_empty() {
             return Err(anyhow::anyhow!(

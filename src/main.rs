@@ -6,6 +6,7 @@ mod output;
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use colored::Colorize;
+use tracing_subscriber::{EnvFilter, fmt};
 
 use cli::{Cli, Commands, JiraCommands};
 use cli::confluence::ConfluenceCommands;
@@ -28,6 +29,22 @@ async fn main() {
 
 async fn run() -> Result<()> {
     let cli = Cli::parse();
+
+    // Init tracing: --trace > --debug > RUST_LOG env var > off
+    // "atlassian" = binary crate modules, "atlassian_cli" = lib crate modules
+    let filter = if cli.trace {
+        EnvFilter::new("atlassian=trace,atlassian_cli=trace,reqwest=debug")
+    } else if cli.debug {
+        EnvFilter::new("atlassian=debug,atlassian_cli=debug,reqwest=debug")
+    } else {
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("off"))
+    };
+    fmt::Subscriber::builder()
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .with_target(false)
+        .without_time()
+        .init();
 
     match cli.command {
         Commands::Jira { command } => handle_jira(command).await,

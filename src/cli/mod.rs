@@ -17,6 +17,14 @@ mod tests;
     long_about = None
 )]
 pub struct Cli {
+    /// Enable debug/trace logging (or set RUST_LOG=debug / RUST_LOG=trace)
+    #[arg(long, short = 'D', global = true)]
+    pub debug: bool,
+
+    /// Enable trace-level logging (more verbose than --debug)
+    #[arg(long, global = true)]
+    pub trace: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }

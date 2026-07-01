@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::debug;
 
 pub mod confluence;
 
@@ -235,6 +236,10 @@ impl JiraClient {
             .default_headers(headers)
             .build()?;
 
+        debug!("JiraClient: base_url={}", config.api_base_url());
+        debug!("JiraClient: email={}", config.email);
+        debug!("JiraClient: api_token={}...{}", &config.jira_api_token[..8.min(config.jira_api_token.len())], &config.jira_api_token[config.jira_api_token.len().saturating_sub(4)..]);
+
         Ok(Self {
             client,
             base_url: config.api_base_url(),
@@ -249,6 +254,7 @@ impl JiraClient {
 
     async fn check_response(&self, resp: reqwest::Response) -> Result<reqwest::Response> {
         let status = resp.status();
+        debug!("HTTP {} {}", status.as_u16(), resp.url());
         if !status.is_success() {
             let msg = resp.text().await.unwrap_or_default();
             let message = serde_json::from_str::<Value>(&msg)
@@ -268,6 +274,7 @@ impl JiraClient {
 
     pub async fn myself(&self) -> Result<User> {
         let url = format!("{}/myself", self.base_url);
+        debug!("GET {}", url);
         let resp = self.client.get(&url)
             .basic_auth(self.auth().0, Some(self.auth().1))
             .send().await?;
@@ -277,6 +284,7 @@ impl JiraClient {
 
     pub async fn search_issues(&self, jql: &str, next_page_token: Option<&str>, max_results: u32) -> Result<SearchResult> {
         let url = format!("{}/search/jql", self.base_url);
+        debug!("GET {} jql={:?} max_results={}", url, jql, max_results);
         let mut params = vec![
             ("jql", jql.to_string()),
             ("maxResults", max_results.to_string()),
@@ -295,6 +303,7 @@ impl JiraClient {
 
     pub async fn get_issue(&self, key: &str) -> Result<Issue> {
         let url = format!("{}/issue/{}", self.base_url, key);
+        debug!("GET {}", url);
         let resp = self.client.get(&url)
             .basic_auth(self.auth().0, Some(self.auth().1))
             .query(&[("fields", "*all")])

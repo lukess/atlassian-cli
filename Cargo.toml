@@ -3,6 +3,10 @@ name = "atlassian-cli"
 version = "0.1.6"
 edition = "2024"
 
+[lib]
+name = "atlassian_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "atlassian"
 path = "src/main.rs"
@@ -21,3 +25,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 toml = "1.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
 use serde::Deserialize;
 use serde_json::Value;
+use tracing::debug;
 
 use crate::config::Config;
 
@@ -148,11 +149,20 @@ impl ConfluenceClient {
             .build()?;
 
         // confluence_api_token → CONFLUENCE_API_TOKEN env var → falls back to Jira jira_api_token
+        let token_source = if config.confluence_api_token.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
+            "confluence_api_token (config/env)"
+        } else {
+            "jira_api_token (fallback)"
+        };
         let api_token = config
             .confluence_api_token
             .clone()
             .filter(|t| !t.is_empty())
             .unwrap_or_else(|| config.jira_api_token.clone());
+
+        debug!("ConfluenceClient: base_url={}", config.confluence_api_base_url());
+        debug!("ConfluenceClient: email={}", config.email);
+        debug!("ConfluenceClient: token source={}", token_source);
 
         Ok(Self {
             client,
@@ -168,6 +178,7 @@ impl ConfluenceClient {
 
     async fn check_response(&self, resp: reqwest::Response) -> Result<reqwest::Response> {
         let status = resp.status();
+        debug!("HTTP {} {}", status.as_u16(), resp.url());
         if !status.is_success() {
             let msg = resp.text().await.unwrap_or_default();
             let message = serde_json::from_str::<Value>(&msg)
