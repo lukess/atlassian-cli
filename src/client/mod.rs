@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::debug;
 
+pub mod adf;
 pub mod confluence;
 
 use crate::config::Config;
@@ -349,14 +350,7 @@ impl JiraClient {
     ) -> Result<Issue> {
         let url = format!("{}/issue", self.base_url);
 
-        let desc_value = description.map(|d| serde_json::json!({
-            "type": "doc",
-            "version": 1,
-            "content": [{
-                "type": "paragraph",
-                "content": [{ "type": "text", "text": d }]
-            }]
-        }));
+        let desc_value = description.map(adf::markdown_to_adf);
 
         let mut fields = serde_json::json!({
             "project": { "key": project_key },
@@ -416,10 +410,7 @@ impl JiraClient {
             fields["summary"] = serde_json::json!(s);
         }
         if let Some(d) = description {
-            fields["description"] = serde_json::json!({
-                "type": "doc", "version": 1,
-                "content": [{"type": "paragraph", "content": [{"type": "text", "text": d}]}]
-            });
+            fields["description"] = adf::markdown_to_adf(d);
         }
         if let Some(p) = priority {
             fields["priority"] = serde_json::json!({"name": p});
@@ -550,14 +541,7 @@ impl JiraClient {
     pub async fn add_comment(&self, key: &str, body: &str) -> Result<Comment> {
         let url = format!("{}/issue/{}/comment", self.base_url, key);
         let payload = serde_json::json!({
-            "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [{
-                    "type": "paragraph",
-                    "content": [{ "type": "text", "text": body }]
-                }]
-            }
+            "body": adf::markdown_to_adf(body)
         });
         let resp = self.client.post(&url)
             .basic_auth(self.auth().0, Some(self.auth().1))
