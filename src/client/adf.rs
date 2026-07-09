@@ -165,6 +165,33 @@ fn push_text(stack: &mut Vec<Frame>, marks: &[Value], text: &str) {
     if text.is_empty() {
         return;
     }
+    // Don't autolink when the text is already inside a link (avoids nesting) or
+    // an inline code span (a URL in `code` should stay literal).
+    let already_linked = marks.iter().any(|m| {
+        matches!(
+            m.get("type").and_then(Value::as_str),
+            Some("link") | Some("code")
+        )
+    });
+    if already_linked {
+        emit_text_node(stack, marks, text);
+        return;
+    }
+    for (segment, is_url) in split_urls(text) {
+        if is_url {
+            let mut m = marks.to_vec();
+            m.push(json!({ "type": "link", "attrs": { "href": segment } }));
+            emit_text_node(stack, &m, &segment);
+        } else {
+            emit_text_node(stack, marks, &segment);
+        }
+    }
+}
+
+fn emit_text_node(stack: &mut Vec<Frame>, marks: &[Value], text: &str) {
+    if text.is_empty() {
+        return;
+    }
     ensure_inline(stack);
     let mut node = json!({ "type": "text", "text": text });
     if !marks.is_empty() {
@@ -173,6 +200,47 @@ fn push_text(stack: &mut Vec<Frame>, marks: &[Value], text: &str) {
     if let Some(f) = stack.last_mut() {
         f.children.push(node);
     }
+}
+
+/// Split text into segments, flagging bare `http(s)://` URLs so callers can
+/// attach a link mark. pulldown-cmark does not autolink bare URLs, so we do it.
+fn split_urls(text: &str) -> Vec<(String, bool)> {
+    let mut out: Vec<(String, bool)> = Vec::new();
+    let mut rest = text;
+    while let Some(start) = find_url_start(rest) {
+        let (before, from) = rest.split_at(start);
+        if !before.is_empty() {
+            out.push((before.to_string(), false));
+        }
+        let end = from.find(char::is_whitespace).unwrap_or(from.len());
+        let (candidate, tail) = from.split_at(end);
+        // Strip trailing punctuation that is almost never part of a URL.
+        let core = candidate
+            .trim_end_matches(['.', ',', ';', ':', '!', '?', ')', ']', '}', '"', '\'']);
+        let (url, trailing) = candidate.split_at(core.len());
+        out.push((url.to_string(), true));
+        if !trailing.is_empty() {
+            out.push((trailing.to_string(), false));
+        }
+        rest = tail;
+    }
+    if !rest.is_empty() {
+        out.push((rest.to_string(), false));
+    }
+    out
+}
+
+fn find_url_start(s: &str) -> Option<usize> {
+    let mut i = 0;
+    while let Some(p) = s[i..].find("http") {
+        let idx = i + p;
+        let rem = &s[idx..];
+        if rem.starts_with("http://") || rem.starts_with("https://") {
+            return Some(idx);
+        }
+        i = idx + 4;
+    }
+    None
 }
 
 fn push_raw_text(stack: &mut Vec<Frame>, text: &str) {
@@ -334,6 +402,50 @@ mod tests {
         assert_eq!(node["text"], "text");
         assert_eq!(node["marks"][0]["type"], "link");
         assert_eq!(node["marks"][0]["attrs"]["href"], "https://example.com");
+    }
+
+    #[test]
+    fn bare_url_becomes_link() {
+        let adf = markdown_to_adf("see https://github.com/mistsys/mobius/compare/v1...v2 now");
+        let content = &adf["content"][0]["content"];
+        // "see " | url(link) | " now"
+        assert_eq!(content[0]["text"], "see ");
+        assert!(content[0].get("marks").is_none());
+        assert_eq!(content[1]["text"], "https://github.com/mistsys/mobius/compare/v1...v2");
+        assert_eq!(content[1]["marks"][0]["type"], "link");
+        assert_eq!(
+            content[1]["marks"][0]["attrs"]["href"],
+            "https://github.com/mistsys/mobius/compare/v1...v2"
+        );
+        assert_eq!(content[2]["text"], " now");
+    }
+
+    #[test]
+    fn bare_url_trailing_punctuation_excluded() {
+        let adf = markdown_to_adf("visit https://example.com.");
+        let content = &adf["content"][0]["content"];
+        assert_eq!(content[1]["text"], "https://example.com");
+        assert_eq!(content[1]["marks"][0]["attrs"]["href"], "https://example.com");
+        assert_eq!(content[2]["text"], ".");
+    }
+
+    #[test]
+    fn markdown_link_not_double_wrapped() {
+        // A proper [text](url) link must keep display text and a single link mark.
+        let adf = markdown_to_adf("[docs](https://example.com)");
+        let node = &adf["content"][0]["content"][0];
+        assert_eq!(node["text"], "docs");
+        assert_eq!(node["marks"].as_array().unwrap().len(), 1);
+        assert_eq!(node["marks"][0]["type"], "link");
+    }
+
+    #[test]
+    fn url_in_code_span_stays_literal() {
+        let adf = markdown_to_adf("`https://example.com`");
+        let node = &adf["content"][0]["content"][0];
+        assert_eq!(node["text"], "https://example.com");
+        assert_eq!(node["marks"][0]["type"], "code");
+        assert_eq!(node["marks"].as_array().unwrap().len(), 1);
     }
 
     #[test]
