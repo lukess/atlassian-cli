@@ -104,6 +104,12 @@ echo "comment" | atlassian jira issue comment add PROJ-123
 atlassian jira issue comment add PROJ-123 --web          # open in browser after
 ```
 
+> **Markdown support:** comment and description text is written in Markdown and
+> automatically converted to Jira's native ADF (Atlassian Document Format).
+> Supported: headings, **bold**, *italic*, `inline code`, fenced code blocks,
+> bullet/ordered lists, blockquotes, and `[links](url)`. Applies to
+> `issue comment add`, `issue create --description`, and `issue edit --body`.
+
 #### `issue list` flags
 
 | Flag | Short | Description |

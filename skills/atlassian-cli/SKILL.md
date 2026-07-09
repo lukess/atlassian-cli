@@ -204,3 +204,4 @@ markdown = true   # numeric field — skip ADF parsing
 13. **Attachment filename sanitization** — always use `Path::file_name()` on `att.filename` before writing to disk; API filenames may contain path traversal sequences.
 14. **Attachment download URL validation** — `download_attachment` validates the URL starts with the configured Jira instance prefix (`base_url.trim_end_matches("/rest/api/3")`); prevents SSRF and credential leakage to arbitrary hosts.
 15. **`--open 0` on attachment** — 1-based index; `0` is explicitly rejected with an error (not silently treated as index 1).
+17. **Markdown → ADF for input** — comment/description text is Markdown, converted to ADF via `client::adf::markdown_to_adf` (pulldown-cmark) before POST. Handles headings, bold/italic/code marks, code blocks, bullet/ordered lists, blockquotes, links. Used by `add_comment`, `create_issue`, `edit_issue`. Jira stores ADF, not Markdown — sending raw text renders as literal source.
