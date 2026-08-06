@@ -5,7 +5,7 @@
 //! document so headings, lists, bold/italic, code, links, etc. render natively
 //! in Jira instead of appearing as literal Markdown source.
 
-use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Parser, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde_json::{json, Value};
 
 /// Convert a Markdown string into an ADF `doc` node.
@@ -31,6 +31,9 @@ enum Kind {
     ListItem,
     Blockquote,
     CodeBlock(Option<String>),
+    Table,
+    TableRow(bool),  // true = header row
+    TableCell(bool), // true = header cell
 }
 
 struct Frame {
@@ -47,13 +50,13 @@ impl Frame {
     fn expects_blocks(&self) -> bool {
         matches!(
             self.kind,
-            Kind::Root | Kind::ListItem | Kind::Blockquote | Kind::BulletList | Kind::OrderedList(_)
+            Kind::Root | Kind::ListItem | Kind::Blockquote | Kind::BulletList | Kind::OrderedList(_) | Kind::TableCell(_)
         )
     }
 }
 
 fn build_blocks(md: &str) -> Vec<Value> {
-    let parser = Parser::new(md);
+    let parser = Parser::new_ext(md, Options::ENABLE_TABLES);
     let mut stack: Vec<Frame> = vec![Frame::new(Kind::Root)];
     let mut marks: Vec<Value> = Vec::new();
 
@@ -79,6 +82,15 @@ fn build_blocks(md: &str) -> Vec<Value> {
                         };
                         stack.push(Frame::new(Kind::CodeBlock(lang)));
                     }
+                    Tag::Table(_) => stack.push(Frame::new(Kind::Table)),
+                    Tag::TableHead => stack.push(Frame::new(Kind::TableRow(true))),
+                    Tag::TableRow => stack.push(Frame::new(Kind::TableRow(false))),
+                    Tag::TableCell => {
+                        let header = stack.iter().rev()
+                            .find_map(|f| match f.kind { Kind::TableRow(h) => Some(h), _ => None })
+                            .unwrap_or(false);
+                        stack.push(Frame::new(Kind::TableCell(header)));
+                    }
                     Tag::Emphasis => marks.push(json!({ "type": "em" })),
                     Tag::Strong => marks.push(json!({ "type": "strong" })),
                     Tag::Strikethrough => marks.push(json!({ "type": "strike" })),
@@ -95,7 +107,8 @@ fn build_blocks(md: &str) -> Vec<Value> {
                 | TagEnd::Link => {
                     marks.pop();
                 }
-                TagEnd::Item | TagEnd::BlockQuote(_) | TagEnd::List(_) => {
+                TagEnd::Item | TagEnd::BlockQuote(_) | TagEnd::List(_)
+                | TagEnd::Table | TagEnd::TableHead | TagEnd::TableRow | TagEnd::TableCell => {
                     close_implicit_para(&mut stack);
                     close_frame(&mut stack);
                 }
@@ -290,6 +303,21 @@ fn close_frame(stack: &mut Vec<Frame>) {
             json!({ "type": "listItem", "content": content })
         }
         Kind::Blockquote => json!({ "type": "blockquote", "content": frame.children }),
+        Kind::Table => json!({
+            "type": "table",
+            "attrs": { "isNumberColumnEnabled": false, "layout": "default" },
+            "content": frame.children,
+        }),
+        Kind::TableRow(_) => json!({ "type": "tableRow", "content": frame.children }),
+        Kind::TableCell(is_header) => {
+            let content = if frame.children.is_empty() {
+                vec![json!({ "type": "paragraph", "content": [] })]
+            } else {
+                frame.children
+            };
+            let ty = if is_header { "tableHeader" } else { "tableCell" };
+            json!({ "type": ty, "attrs": {}, "content": content })
+        }
         Kind::CodeBlock(lang) => {
             let text: String = frame
                 .children
@@ -454,6 +482,22 @@ mod tests {
             markdown_to_adf(""),
             doc(json!([{ "type": "paragraph", "content": [] }]))
         );
+    }
+
+    #[test]
+    fn table_to_adf() {
+        let md = "| Name | Role |\n| --- | --- |\n| Ada | Engineer |";
+        let adf = markdown_to_adf(md);
+        let table = &adf["content"][0];
+        assert_eq!(table["type"], "table");
+        let rows = table["content"].as_array().unwrap();
+        assert_eq!(rows.len(), 2);
+        // Header row uses tableHeader cells.
+        assert_eq!(rows[0]["content"][0]["type"], "tableHeader");
+        assert_eq!(rows[0]["content"][0]["content"][0]["content"][0]["text"], "Name");
+        // Body row uses tableCell cells.
+        assert_eq!(rows[1]["content"][0]["type"], "tableCell");
+        assert_eq!(rows[1]["content"][1]["content"][0]["content"][0]["text"], "Engineer");
     }
 
     #[test]

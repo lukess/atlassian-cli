@@ -97,6 +97,8 @@ fn adf_node(node: &serde_json::Value, depth: usize) -> String {
             format!("  {}\n", adf_children(node, depth).trim())
         }
 
+        "table" => adf_table(node),
+
         "rule" => "─────────────────\n".to_string(),
         "hardBreak" => "\n".to_string(),
 
@@ -172,6 +174,69 @@ fn adf_list(node: &serde_json::Value, depth: usize, ordered: bool) -> String {
             }
         }).collect::<Vec<_>>().join(""))
         .unwrap_or_default()
+}
+
+/// Render an ADF `table` node as a box-drawing grid.
+///
+/// Each `tableRow` holds `tableHeader`/`tableCell` nodes whose content is a list
+/// of block nodes (paragraphs, lists, etc.). Cell text may span multiple lines;
+/// column widths are sized to the widest line and every interior row boundary is
+/// drawn so the result is a genuine grid rather than concatenated cell text.
+fn adf_table(node: &serde_json::Value) -> String {
+    let rows: Vec<Vec<String>> = node.get("content").and_then(|c| c.as_array())
+        .map(|rows| rows.iter().filter_map(|row| {
+            row.get("content").and_then(|c| c.as_array()).map(|cells| {
+                cells.iter()
+                    .map(|cell| adf_children(cell, 0).trim_end_matches('\n').trim().to_string())
+                    .collect::<Vec<_>>()
+            })
+        }).collect())
+        .unwrap_or_default();
+
+    if rows.is_empty() { return String::new(); }
+    let ncols = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if ncols == 0 { return String::new(); }
+
+    let mut widths = vec![0usize; ncols];
+    for row in &rows {
+        for (i, cell) in row.iter().enumerate() {
+            let w = cell.lines().map(|l| l.chars().count()).max().unwrap_or(0);
+            if w > widths[i] { widths[i] = w; }
+        }
+    }
+
+    let sep = |left: &str, mid: &str, right: &str| -> String {
+        let mut s = String::from(left);
+        for (i, w) in widths.iter().enumerate() {
+            s.push_str(&"─".repeat(w + 2));
+            s.push_str(if i + 1 == ncols { right } else { mid });
+        }
+        s.push('\n');
+        s
+    };
+
+    let mut out = sep("┌", "┬", "┐");
+    for (ri, row) in rows.iter().enumerate() {
+        let cell_lines: Vec<Vec<&str>> = (0..ncols).map(|i| {
+            row.get(i).map(|c| c.lines().collect::<Vec<_>>()).unwrap_or_default()
+        }).collect();
+        let height = cell_lines.iter().map(|l| l.len().max(1)).max().unwrap_or(1);
+        for line_idx in 0..height {
+            let mut line = String::from("│");
+            for (i, width) in widths.iter().enumerate() {
+                let text = cell_lines[i].get(line_idx).copied().unwrap_or("");
+                let pad = width.saturating_sub(text.chars().count());
+                line.push_str(&format!(" {}{} │", text, " ".repeat(pad)));
+            }
+            line.push('\n');
+            out.push_str(&line);
+        }
+        if ri + 1 < rows.len() {
+            out.push_str(&sep("├", "┼", "┤"));
+        }
+    }
+    out.push_str(&sep("└", "┴", "┘"));
+    out
 }
 
 /// Format any JSON field value as a human-readable string.
@@ -387,5 +452,29 @@ mod tests {
         println!("OUTPUT:\n{}", text);
         assert!(text.contains("☑ done task"), "should have checked checkbox");
         assert!(text.contains("☐ todo task"), "should have unchecked checkbox");
+    }
+
+    #[test]
+    fn test_adf_table() {
+        let doc = json!({
+            "type": "doc", "version": 1,
+            "content": [{"type": "table", "content": [
+                {"type": "tableRow", "content": [
+                    {"type": "tableHeader", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Name"}]}]},
+                    {"type": "tableHeader", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Role"}]}]}
+                ]},
+                {"type": "tableRow", "content": [
+                    {"type": "tableCell", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Ada"}]}]},
+                    {"type": "tableCell", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Engineer"}]}]}
+                ]}
+            ]}]
+        });
+        let text = adf_to_text(&doc);
+        println!("OUTPUT:\n{}", text);
+        assert!(text.contains("┌"), "should have top-left corner");
+        assert!(text.contains("┼"), "should have interior grid junction");
+        assert!(text.contains("│ Name │ Role     │"), "header row aligned: {text}");
+        assert!(text.contains("│ Ada  │ Engineer │"), "body row aligned: {text}");
+        assert!(text.contains("└"), "should have bottom border");
     }
 }
