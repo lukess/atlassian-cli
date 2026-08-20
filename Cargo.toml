@@ -1,6 +1,6 @@
 [package]
 name = "atlassian-cli"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2024"
 
 [lib]
@@ -17,7 +17,7 @@ chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
 colored = "3"
-crossterm = "0.27"
+crossterm = "0.29"
 dirs = "6"
 pulldown-cmark = { version = "0.13.4", default-features = false }
 ratatui = "0.30"
